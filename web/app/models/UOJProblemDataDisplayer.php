@@ -77,14 +77,14 @@ class UOJProblemDataDisplayer {
 		echo "\n</pre>";
 	}
 	public function echoProblemConfTable() {
-		echo '<table class="table table-bordered table-hover table-striped table-text-center">';
+		echo '<table class="table table-bordered table-hover table-striped table-text-center" data-role="problem-conf-table">';
 		echo '<thead>';
 		echo '<tr>';
 		echo '<th>key</th>';
 		echo '<th>value</th>';
 		echo '</tr>';
 		echo '</thead>';
-		echo '<tbody>';
+		echo '<tbody data-role="problem-conf-table-body">';
 		foreach ($this->problem_conf as $key => $info) {
 			$val = isset($info['val']) ? $info['val'] : '';
 			if (!isset($info['status'])) {

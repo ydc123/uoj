@@ -265,7 +265,31 @@ function getDataDisplayer() {
 $data_disp = getDataDisplayer();
 
 if (isset($_GET['display_file'])) {
-	$data_disp->displayFile(UOJRequest::get('file_name', 'is_string'));
+	$file_name = UOJRequest::get('file_name', 'is_string');
+	if ($file_name === 'problem.conf' && UOJRequest::get('format', 'is_string') === 'json') {
+		header('Content-Type: application/json; charset=utf-8');
+		$problem_conf = UOJProblem::cur()->getProblemConfArray();
+		if ($problem_conf === -1) {
+			echo json_encode(['status' => 'not_found'], JSON_UNESCAPED_UNICODE);
+		} elseif ($problem_conf === -2) {
+			echo json_encode(['status' => 'invalid'], JSON_UNESCAPED_UNICODE);
+		} else {
+			$rows = [];
+			foreach ($data_disp->problem_conf as $key => $info) {
+				$rows[] = [
+					'key' => $key,
+					'val' => $info['val'] ?? '',
+					'status' => $info['status'] ?? null
+				];
+			}
+			echo json_encode([
+				'status' => 'ok',
+				'rows' => $rows
+			], JSON_UNESCAPED_UNICODE);
+		}
+		die();
+	}
+	$data_disp->displayFile($file_name);
 	die();
 }
 
@@ -463,7 +487,46 @@ requireLib('dialog');
 				<?php $data_disp->displayFile('problem.conf'); ?>
 			</div>
 			<script type="text/javascript">
-				curFileName = '';
+				curFileName = 'problem.conf';
+				function renderProblemConfTable(rows) {
+					var $tbody = $('#div-file_content [data-role="problem-conf-table-body"]');
+					if ($tbody.length === 0 || !Array.isArray(rows)) {
+						return;
+					}
+					$tbody.empty();
+					rows.forEach(function(row) {
+						var status = row.status || null;
+						var $tr = $('<tr>');
+						if (status === 'danger') {
+							$tr.addClass('text-danger');
+						}
+						$('<td>').text(row.key == null ? '' : String(row.key)).appendTo($tr);
+						var $val = $('<td>').text(row.val == null ? '' : String(row.val));
+						if (status === 'danger') {
+							$val.append(' ').append($('<span>').addClass('glyphicon glyphicon-remove'));
+						}
+						$tr.append($val);
+						$tbody.append($tr);
+					});
+				}
+				function refreshProblemConfTable(fileName) {
+					if (fileName !== 'problem.conf') {
+						return;
+					}
+					$.get('/problem/<?= $problem['id'] ?>/manage/data', {
+							display_file: '',
+							file_name: fileName,
+							format: 'json'
+						},
+						function(data) {
+							if (curFileName != fileName || !data || data.status !== 'ok') {
+								return;
+							}
+							renderProblemConfTable(data.rows);
+						},
+						'json'
+					);
+				}
 				$('#div-file_list a').click(function(e) {
 					$('#div-file_content').html('<h3>loading...</h3>');
 					$(this).tab('show');
@@ -479,11 +542,13 @@ requireLib('dialog');
 								return;
 							}
 							$('#div-file_content').html(data);
+							refreshProblemConfTable(fileName);
 						},
 						'html'
 					);
 					return false;
 				});
+				refreshProblemConfTable('problem.conf');
 			</script>
 		</div>
 	</div>
